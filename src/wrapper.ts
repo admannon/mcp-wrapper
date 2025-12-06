@@ -56,9 +56,10 @@ export class McpWrapper {
       }
       
       // Check for reserved names
-      if (reservedNames.includes(serverConfig.name.toLowerCase())) {
+      const lowerName = serverConfig.name.toLowerCase();
+      if (reservedNames.includes(lowerName)) {
         throw new Error(
-          `Invalid server name "${serverConfig.name}": server name cannot be "${serverConfig.name.toLowerCase()}" as it is reserved for wrapper management tools`
+          `Invalid server name "${serverConfig.name}": server name cannot be "wrapper" as it is reserved for wrapper management tools`
         );
       }
       

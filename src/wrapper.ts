@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { SSEClientTransport, SseError } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
@@ -139,14 +139,15 @@ export class McpWrapper {
 
     if (serverConfig.url) {
       // Use SSE transport for URL-based servers
+      let parsedUrl: URL;
       try {
-        new URL(serverConfig.url); // Validate URL format
+        parsedUrl = new URL(serverConfig.url);
       } catch (error) {
         throw new ConfigurationError(
           `Server "${serverConfig.name}" has invalid URL: "${serverConfig.url}"`
         );
       }
-      transport = new SSEClientTransport(new URL(serverConfig.url));
+      transport = new SSEClientTransport(parsedUrl);
     } else {
       // Use stdio transport for command-based servers
       // serverConfig.command is guaranteed to exist due to validation above
@@ -172,24 +173,24 @@ export class McpWrapper {
       await client.connect(transport);
     } catch (error) {
       // Provide more helpful error messages for SSE connection failures
-      if (serverConfig.url && error instanceof Error) {
-        const errorMsg = error.message;
+      if (serverConfig.url && error instanceof SseError) {
+        const statusCode = error.code;
         
-        // Check for common SSE error patterns
-        if (errorMsg.includes("405") || errorMsg.includes("Method Not Allowed")) {
+        // Provide specific guidance based on HTTP status code
+        if (statusCode === 405) {
           throw new Error(
             `Server "${serverConfig.name}" at URL "${serverConfig.url}" returned HTTP 405 (Method Not Allowed). ` +
             `This usually means the URL is not a valid MCP SSE endpoint. ` +
             `Make sure the URL points to an actual MCP server that supports SSE transport, not a documentation page or regular website.`
           );
-        } else if (errorMsg.includes("404") || errorMsg.includes("Not Found")) {
+        } else if (statusCode === 404) {
           throw new Error(
             `Server "${serverConfig.name}" at URL "${serverConfig.url}" returned HTTP 404 (Not Found). ` +
             `Please check that the URL is correct and the MCP server is running.`
           );
-        } else if (errorMsg.includes("Non-200 status code")) {
+        } else {
           throw new Error(
-            `Server "${serverConfig.name}" at URL "${serverConfig.url}" failed to connect: ${errorMsg}. ` +
+            `Server "${serverConfig.name}" at URL "${serverConfig.url}" failed to connect with HTTP ${statusCode}: ${error.message}. ` +
             `Make sure the URL points to a valid MCP SSE endpoint and the server is running correctly.`
           );
         }

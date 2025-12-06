@@ -40,6 +40,8 @@ export class McpWrapper {
 
     // Validate server names don't contain separator and are unique
     const seenServerNames = new Set<string>();
+    const reservedNames = ['wrapper'];
+    
     for (const serverConfig of config.servers) {
       // Validate required fields
       if (!serverConfig.name || typeof serverConfig.name !== 'string') {
@@ -50,6 +52,13 @@ export class McpWrapper {
       if (!serverConfig.command || typeof serverConfig.command !== 'string') {
         throw new Error(
           `Invalid server configuration for "${serverConfig.name}": each server must have a 'command' field (string)`
+        );
+      }
+      
+      // Check for reserved names
+      if (reservedNames.includes(serverConfig.name.toLowerCase())) {
+        throw new Error(
+          `Invalid server name "${serverConfig.name}": server name cannot be "${serverConfig.name.toLowerCase()}" as it is reserved for wrapper management tools`
         );
       }
       

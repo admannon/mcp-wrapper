@@ -124,6 +124,32 @@ describe("McpWrapper", () => {
       );
     });
 
+    it("should throw error for reserved server name 'wrapper'", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "wrapper", command: "node", args: ["server.js"] },
+        ],
+      };
+
+      expect(() => new McpWrapper(config)).toThrow(
+        'Invalid server name "wrapper": server name cannot be "wrapper" as it is reserved for wrapper management tools'
+      );
+    });
+
+    it("should throw error for reserved server name 'WRAPPER' (case insensitive)", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "WRAPPER", command: "node", args: ["server.js"] },
+        ],
+      };
+
+      expect(() => new McpWrapper(config)).toThrow(
+        'Invalid server name "WRAPPER": server name cannot be "wrapper" as it is reserved for wrapper management tools'
+      );
+    });
+
     it("should throw error for server name containing separator", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",

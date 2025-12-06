@@ -140,12 +140,13 @@ export class McpWrapper {
     if (serverConfig.url) {
       // Use SSE transport for URL-based servers
       try {
-        transport = new SSEClientTransport(new URL(serverConfig.url));
+        new URL(serverConfig.url); // Validate URL format
       } catch (error) {
         throw new ConfigurationError(
           `Server "${serverConfig.name}" has invalid URL: "${serverConfig.url}"`
         );
       }
+      transport = new SSEClientTransport(new URL(serverConfig.url));
     } else {
       // Use stdio transport for command-based servers
       // serverConfig.command is guaranteed to exist due to validation above
@@ -167,7 +168,36 @@ export class McpWrapper {
       }
     );
 
-    await client.connect(transport);
+    try {
+      await client.connect(transport);
+    } catch (error) {
+      // Provide more helpful error messages for SSE connection failures
+      if (serverConfig.url && error instanceof Error) {
+        const errorMsg = error.message;
+        
+        // Check for common SSE error patterns
+        if (errorMsg.includes("405") || errorMsg.includes("Method Not Allowed")) {
+          throw new Error(
+            `Server "${serverConfig.name}" at URL "${serverConfig.url}" returned HTTP 405 (Method Not Allowed). ` +
+            `This usually means the URL is not a valid MCP SSE endpoint. ` +
+            `Make sure the URL points to an actual MCP server that supports SSE transport, not a documentation page or regular website.`
+          );
+        } else if (errorMsg.includes("404") || errorMsg.includes("Not Found")) {
+          throw new Error(
+            `Server "${serverConfig.name}" at URL "${serverConfig.url}" returned HTTP 404 (Not Found). ` +
+            `Please check that the URL is correct and the MCP server is running.`
+          );
+        } else if (errorMsg.includes("Non-200 status code")) {
+          throw new Error(
+            `Server "${serverConfig.name}" at URL "${serverConfig.url}" failed to connect: ${errorMsg}. ` +
+            `Make sure the URL points to a valid MCP SSE endpoint and the server is running correctly.`
+          );
+        }
+      }
+      
+      // Re-throw the original error if we didn't handle it
+      throw error;
+    }
 
     // List tools from the server
     const toolsResult = await client.listTools();

@@ -260,7 +260,7 @@ describe("McpWrapper", () => {
       const wrapper = new McpWrapper(config);
       
       await expect(wrapper.connectToServers()).rejects.toThrow(
-        'Server "server1" has invalid URL: "not-a-valid-url"'
+        'Server "server1" has invalid URL format: "not-a-valid-url"'
       );
     });
   });

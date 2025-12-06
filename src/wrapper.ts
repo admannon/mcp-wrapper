@@ -337,8 +337,6 @@ export class McpWrapper {
    * Skips servers that fail to connect and tracks them for retry
    */
   async connectToServers(): Promise<void> {
-    const failures: Array<{ serverName: string; error: unknown }> = [];
-
     for (const serverConfig of this.config.servers) {
       try {
         // Add timeout to prevent hanging on slow or unresponsive servers
@@ -364,12 +362,8 @@ export class McpWrapper {
 
         console.error(`Connected to server "${serverConfig.name}" with ${connectedServer.tools.length} tools`);
       } catch (error) {
-        // Re-throw configuration errors - these are not recoverable
-        if (error instanceof ConfigurationError) {
-          throw error;
-        }
-        
-        // Handle connection errors - log and continue with other servers
+        // Handle all errors gracefully - log and continue with other servers
+        // This includes both configuration errors and connection errors
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`Failed to connect to server "${serverConfig.name}": ${errorMessage}`);
         

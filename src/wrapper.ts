@@ -49,11 +49,6 @@ export class McpWrapper {
           `Invalid server configuration: each server must have a 'name' field (string)`
         );
       }
-      if (!serverConfig.command || typeof serverConfig.command !== 'string') {
-        throw new Error(
-          `Invalid server configuration for "${serverConfig.name}": each server must have a 'command' field (string)`
-        );
-      }
       
       // Check for reserved names
       const lowerName = serverConfig.name.toLowerCase();

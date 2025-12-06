@@ -85,19 +85,6 @@ describe("McpWrapper", () => {
       );
     });
 
-    it("should throw error for server missing command", () => {
-      const config: WrapperConfig = {
-        name: "test-wrapper",
-        servers: [
-          { name: "server1" } as any,
-        ],
-      };
-
-      expect(() => new McpWrapper(config)).toThrow(
-        'Invalid server configuration for "server1": each server must have a \'command\' field (string)'
-      );
-    });
-
     it("should throw error for server with non-string name", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
@@ -108,19 +95,6 @@ describe("McpWrapper", () => {
 
       expect(() => new McpWrapper(config)).toThrow(
         "Invalid server configuration: each server must have a 'name' field (string)"
-      );
-    });
-
-    it("should throw error for server with non-string command", () => {
-      const config: WrapperConfig = {
-        name: "test-wrapper",
-        servers: [
-          { name: "server1", command: 123 } as any,
-        ],
-      };
-
-      expect(() => new McpWrapper(config)).toThrow(
-        'Invalid server configuration for "server1": each server must have a \'command\' field (string)'
       );
     });
 

@@ -167,10 +167,12 @@ These servers are accessed via HTTP using Server-Sent Events (SSE) for receiving
 }
 ```
 
-**Important:** The `url` must point to an actual MCP server endpoint that supports SSE transport, not a documentation page or regular website. If you receive a `405 (Method Not Allowed)` or `404 (Not Found)` error, verify that:
+**Important:** The `url` must point to an actual MCP server endpoint that supports **standard SSE transport**, not a documentation page or regular website. If you receive a `405 (Method Not Allowed)` or `404 (Not Found)` error, verify that:
 - The URL is correct and the server is running
-- The endpoint actually implements the MCP SSE protocol
+- The endpoint actually implements the MCP SSE protocol as defined by `@modelcontextprotocol/sdk`
 - You're using the correct path (typically ending in `/sse` or `/mcp`)
+
+**⚠️ Compatibility Note:** Some MCP servers like `https://nuxt.com/mcp` are designed specifically for ChatGPT's connector system and do not support standard SSE transport. To use these with `mcp-wrapper`, you need to run them locally (e.g., using `@nuxtjs/mcp-toolkit` in your own Nuxt project) and connect to your local server endpoint.
 
 **Note:** Each server must specify either `command` or `url`, but not both. You can mix both types of servers in the same wrapper configuration.
 
@@ -383,8 +385,15 @@ This error means the URL is not a valid MCP SSE endpoint. Common causes:
 - The URL points to a documentation page or website instead of an MCP server
 - The endpoint doesn't support the GET method required by SSE
 - You're using the wrong path (MCP SSE endpoints typically end in `/sse` or `/mcp`)
+- **The endpoint is designed for a specific client** (e.g., `https://nuxt.com/mcp` works with ChatGPT but not standard SSE)
 
-**Solution:** Verify that the URL points to an actual MCP server that implements the SSE transport protocol.
+**Solution:** Verify that the URL points to an actual MCP server that implements the **standard SSE transport protocol** from `@modelcontextprotocol/sdk`.
+
+**Special Case - Nuxt MCP Server:**
+If you're trying to use `https://nuxt.com/mcp`, note that this is designed specifically for ChatGPT's connector system and doesn't support standard SSE transport. To use Nuxt MCP with this wrapper:
+1. Install `@nuxtjs/mcp-toolkit` in your own Nuxt project
+2. Run your Nuxt dev server locally
+3. Connect to your local endpoint (e.g., `http://localhost:3000/mcp`)
 
 **HTTP 404 (Not Found)**
 ```

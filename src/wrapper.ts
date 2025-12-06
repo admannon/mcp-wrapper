@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { SSEClientTransport, SseError } from "@modelcontextprotocol/sdk/client/sse.js";
-import { StreamableHTTPClientTransport, StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
@@ -178,13 +178,13 @@ export class McpWrapper {
     } catch (error) {
       // If Streamable HTTP fails, try SSE as fallback for legacy servers
       if (serverConfig.url && parsedUrl && transport instanceof StreamableHTTPClientTransport) {
-        console.error(`Failed to connect using Streamable HTTP, trying SSE fallback...`);
+        console.warn(`Streamable HTTP connection failed, trying SSE fallback for "${serverConfig.name}"...`);
         
         try {
           transport = new SSEClientTransport(parsedUrl);
           await client.connect(transport);
           // Success with SSE fallback
-          console.error(`Connected to "${serverConfig.name}" using legacy SSE transport`);
+          console.warn(`Connected to "${serverConfig.name}" using legacy SSE transport`);
         } catch (sseError) {
           // Both transports failed, provide helpful error message
           if (sseError instanceof SseError) {

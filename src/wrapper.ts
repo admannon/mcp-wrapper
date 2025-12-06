@@ -110,7 +110,13 @@ export class McpWrapper {
 
     if (serverConfig.url) {
       // Use SSE transport for URL-based servers
-      transport = new SSEClientTransport(new URL(serverConfig.url));
+      try {
+        transport = new SSEClientTransport(new URL(serverConfig.url));
+      } catch (error) {
+        throw new Error(
+          `Server "${serverConfig.name}" has invalid URL: "${serverConfig.url}"`
+        );
+      }
     } else {
       // Use stdio transport for command-based servers
       // serverConfig.command is guaranteed to exist due to validation above

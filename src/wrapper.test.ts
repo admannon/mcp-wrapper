@@ -183,6 +183,21 @@ describe("McpWrapper", () => {
         'Server "server1" cannot specify both "command" and "url"'
       );
     });
+
+    it("should fail when server has invalid URL format", async () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "server1", url: "not-a-valid-url" },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      
+      await expect(wrapper.connectToServers()).rejects.toThrow(
+        'Server "server1" has invalid URL: "not-a-valid-url"'
+      );
+    });
   });
 
   describe("close", () => {

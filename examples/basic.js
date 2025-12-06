@@ -12,7 +12,7 @@ import { McpWrapper } from "../dist/index.js";
 // Create wrapper with configuration
 const wrapper = new McpWrapper({
   name: "example-wrapper",
-  version: "1.0.0",
+  // version is optional, defaults to "1.0.0"
   servers: [
     // Example: Wrap two different MCP servers
     // Uncomment and modify based on your needs:

@@ -38,9 +38,9 @@ export interface WrapperConfig {
   name: string;
 
   /**
-   * Version of this wrapper server
+   * Version of this wrapper server (optional, defaults to "1.0.0")
    */
-  version: string;
+  version?: string;
 
   /**
    * List of MCP servers to wrap

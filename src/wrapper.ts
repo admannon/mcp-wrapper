@@ -11,6 +11,7 @@ import type { WrapperConfig, WrappedServerConfig } from "./types.js";
 import { prefixToolName as utilPrefixToolName, isValidServerName } from "./utils.js";
 
 const DEFAULT_SEPARATOR = "__";
+const DEFAULT_VERSION = "1.0.0";
 const SERVER_CLOSE_TIMEOUT_MS = 5000;
 
 interface ConnectedServer {
@@ -54,7 +55,7 @@ export class McpWrapper {
     this.server = new Server(
       {
         name: config.name,
-        version: config.version,
+        version: config.version ?? DEFAULT_VERSION,
       },
       {
         capabilities: {
@@ -98,7 +99,7 @@ export class McpWrapper {
     const client = new Client(
       {
         name: `${this.config.name}-client`,
-        version: this.config.version,
+        version: this.config.version ?? DEFAULT_VERSION,
       },
       {
         capabilities: {},

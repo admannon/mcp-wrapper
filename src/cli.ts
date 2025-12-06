@@ -25,8 +25,8 @@ Usage:
 Configuration JSON format:
 {
   "name": "my-wrapper",
-  "version": "1.0.0",
-  "separator": "__",  // optional, default "__"
+  "version": "1.0.0",  // optional, default "1.0.0"
+  "separator": "__",   // optional, default "__"
   "servers": [
     {
       "name": "server1",
@@ -41,11 +41,11 @@ Examples:
   # Using config file
   npx mcp-wrapper --config ./mcp-wrapper.json
 
-  # Using inline JSON
-  npx mcp-wrapper --config '{"name":"w","version":"1.0.0","servers":[{"name":"gh","command":"npx","args":["-y","@modelcontextprotocol/server-github"]}]}'
+  # Using inline JSON (minimal - version is optional)
+  npx mcp-wrapper --config '{"name":"w","servers":[{"name":"gh","command":"npx","args":["-y","@modelcontextprotocol/server-github"]}]}'
 
   # Using environment variable
-  export MCP_WRAPPER_CONFIG='{"name":"w","version":"1.0.0","servers":[...]}'
+  export MCP_WRAPPER_CONFIG='{"name":"w","servers":[...]}'
   npx mcp-wrapper
 `);
 }
@@ -101,8 +101,8 @@ async function main(): Promise<void> {
   }
 
   // Validate required fields
-  if (!config.name || !config.version || !config.servers) {
-    console.error("Error: Configuration must include 'name', 'version', and 'servers' fields.");
+  if (!config.name || !config.servers) {
+    console.error("Error: Configuration must include 'name' and 'servers' fields.");
     process.exit(1);
   }
 

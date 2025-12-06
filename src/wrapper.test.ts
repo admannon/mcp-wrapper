@@ -7,7 +7,6 @@ describe("McpWrapper", () => {
     it("should create a wrapper with valid configuration", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [
           { name: "server1", command: "node", args: ["server1.js"] },
           { name: "server2", command: "node", args: ["server2.js"] },
@@ -18,10 +17,30 @@ describe("McpWrapper", () => {
       expect(wrapper).toBeDefined();
     });
 
+    it("should use default version when not specified", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [],
+      };
+
+      const wrapper = new McpWrapper(config);
+      expect(wrapper).toBeDefined();
+    });
+
+    it("should use custom version when specified", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        version: "2.0.0",
+        servers: [],
+      };
+
+      const wrapper = new McpWrapper(config);
+      expect(wrapper).toBeDefined();
+    });
+
     it("should use default separator when not specified", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [],
       };
 
@@ -32,7 +51,6 @@ describe("McpWrapper", () => {
     it("should use custom separator when specified", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [],
         separator: "-",
       };
@@ -44,7 +62,6 @@ describe("McpWrapper", () => {
     it("should throw error for server name containing separator", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [
           { name: "server__invalid", command: "node", args: ["server.js"] },
         ],
@@ -58,7 +75,6 @@ describe("McpWrapper", () => {
     it("should throw error for server name containing custom separator", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [
           { name: "server-invalid", command: "node", args: ["server.js"] },
         ],
@@ -73,7 +89,6 @@ describe("McpWrapper", () => {
     it("should throw error for duplicate server names", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [
           { name: "server1", command: "node", args: ["server1.js"] },
           { name: "server1", command: "node", args: ["server2.js"] },
@@ -88,7 +103,6 @@ describe("McpWrapper", () => {
     it("should allow multiple unique server names", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [
           { name: "server1", command: "node", args: ["server1.js"] },
           { name: "server2", command: "node", args: ["server2.js"] },
@@ -105,7 +119,6 @@ describe("McpWrapper", () => {
     it("should return empty array when no servers are connected", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [],
       };
 
@@ -119,7 +132,6 @@ describe("McpWrapper", () => {
     it("should handle close when no servers are connected", async () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
-        version: "1.0.0",
         servers: [],
       };
 

@@ -167,6 +167,11 @@ These servers are accessed via HTTP using Server-Sent Events (SSE) for receiving
 }
 ```
 
+**Important:** The `url` must point to an actual MCP server endpoint that supports SSE transport, not a documentation page or regular website. If you receive a `405 (Method Not Allowed)` or `404 (Not Found)` error, verify that:
+- The URL is correct and the server is running
+- The endpoint actually implements the MCP SSE protocol
+- You're using the correct path (typically ending in `/sse` or `/mcp`)
+
 **Note:** Each server must specify either `command` or `url`, but not both. You can mix both types of servers in the same wrapper configuration.
 
 ### Example: Using with Claude Desktop
@@ -363,6 +368,42 @@ Now tools from both GitHub servers will be available with prefixed names:
 - `github1__list_pull_requests`
 - `github2__create_issue`
 - `github2__list_pull_requests`
+
+## Troubleshooting
+
+### SSE Connection Errors
+
+If you encounter errors when connecting to URL-based (SSE) servers, check the following:
+
+**HTTP 405 (Method Not Allowed)**
+```
+Failed to connect to server "xxx": SSE error: Non-200 status code (405)
+```
+This error means the URL is not a valid MCP SSE endpoint. Common causes:
+- The URL points to a documentation page or website instead of an MCP server
+- The endpoint doesn't support the GET method required by SSE
+- You're using the wrong path (MCP SSE endpoints typically end in `/sse` or `/mcp`)
+
+**Solution:** Verify that the URL points to an actual MCP server that implements the SSE transport protocol.
+
+**HTTP 404 (Not Found)**
+```
+Failed to connect to server "xxx": SSE error: Non-200 status code (404)
+```
+This error means the endpoint doesn't exist. Common causes:
+- Typo in the URL
+- The server is not running
+- Incorrect path
+
+**Solution:** Double-check the URL and ensure the MCP server is running and accessible.
+
+**General Connection Errors**
+
+If you're having trouble connecting to an SSE server:
+1. Verify the server is running and accessible: `curl http://your-server-url/sse`
+2. Check that the URL is correct and includes the proper path
+3. Ensure the server implements the MCP SSE protocol (not just any SSE endpoint)
+4. For local servers, make sure you're using the correct host and port
 
 ## API
 

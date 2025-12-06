@@ -15,6 +15,17 @@ const DEFAULT_SEPARATOR = "__";
 const DEFAULT_VERSION = "1.0.0";
 const SERVER_CLOSE_TIMEOUT_MS = 5000;
 
+/**
+ * Error class for server configuration validation errors
+ * These errors should fail fast and not be caught by resilient connection handling
+ */
+class ConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConfigurationError';
+  }
+}
+
 interface ConnectedServer {
   config: WrappedServerConfig;
   client: Client;
@@ -113,13 +124,13 @@ export class McpWrapper {
     const hasUrl = !!serverConfig.url;
 
     if (!hasCommand && !hasUrl) {
-      throw new Error(
+      throw new ConfigurationError(
         `Server "${serverConfig.name}" must specify either "command" or "url"`
       );
     }
 
     if (hasCommand && hasUrl) {
-      throw new Error(
+      throw new ConfigurationError(
         `Server "${serverConfig.name}" cannot specify both "command" and "url"`
       );
     }
@@ -131,7 +142,7 @@ export class McpWrapper {
       try {
         transport = new SSEClientTransport(new URL(serverConfig.url));
       } catch (error) {
-        throw new Error(
+        throw new ConfigurationError(
           `Server "${serverConfig.name}" has invalid URL: "${serverConfig.url}"`
         );
       }
@@ -273,6 +284,12 @@ export class McpWrapper {
 
         console.error(`Connected to server "${serverConfig.name}" with ${connectedServer.tools.length} tools`);
       } catch (error) {
+        // Re-throw configuration errors - these are not recoverable
+        if (error instanceof ConfigurationError) {
+          throw error;
+        }
+        
+        // Handle connection errors - log and continue with other servers
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`Failed to connect to server "${serverConfig.name}": ${errorMessage}`);
         

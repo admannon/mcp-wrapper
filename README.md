@@ -8,6 +8,7 @@ MCP server to wrap duplicate commands and tools with server name prefix, prevent
 - **Multiple Server Support**: Connect to multiple underlying MCP servers
 - **Transparent Proxying**: Routes tool calls to the correct underlying server
 - **Customizable Separator**: Configure the separator between server name and tool name
+- **CLI Support**: Run directly via `npx` without creating a wrapper script
 
 ## Installation
 
@@ -16,6 +17,46 @@ npm install mcp-wrapper
 ```
 
 ## Usage
+
+### CLI Usage (No Script File Required)
+
+You can run the wrapper directly via `npx` without creating any script files:
+
+```bash
+# Using a config file
+npx mcp-wrapper --config ./mcp-wrapper.json
+
+# Using inline JSON config
+npx mcp-wrapper --config '{"name":"my-wrapper","version":"1.0.0","servers":[{"name":"github","command":"npx","args":["-y","@modelcontextprotocol/server-github"]}]}'
+
+# Using environment variable
+export MCP_WRAPPER_CONFIG='{"name":"my-wrapper","version":"1.0.0","servers":[...]}'
+npx mcp-wrapper
+```
+
+Example config file (`mcp-wrapper.json`):
+
+```json
+{
+  "name": "my-wrapper",
+  "version": "1.0.0",
+  "separator": "__",
+  "servers": [
+    {
+      "name": "github1",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_TOKEN": "token1" }
+    },
+    {
+      "name": "github2",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_TOKEN": "token2" }
+    }
+  ]
+}
+```
 
 ### Programmatic Usage
 
@@ -87,6 +128,57 @@ interface WrappedServerConfig {
 
 ### Example: Using with Claude Desktop
 
+**Option 1: Using CLI with config file (Recommended - No script file needed)**
+
+Create a config file `~/.config/mcp-wrapper.json`:
+```json
+{
+  "name": "wrapped-servers",
+  "version": "1.0.0",
+  "servers": [
+    {
+      "name": "github1",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_TOKEN": "your_token_1" }
+    },
+    {
+      "name": "github2",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_TOKEN": "your_token_2" }
+    }
+  ]
+}
+```
+
+Then add to Claude Desktop configuration:
+```json
+{
+  "mcpServers": {
+    "wrapped-servers": {
+      "command": "npx",
+      "args": ["-y", "mcp-wrapper", "--config", "~/.config/mcp-wrapper.json"]
+    }
+  }
+}
+```
+
+**Option 2: Using inline JSON config (No files needed at all)**
+
+```json
+{
+  "mcpServers": {
+    "wrapped-servers": {
+      "command": "npx",
+      "args": ["-y", "mcp-wrapper", "--config", "{\"name\":\"wrapped\",\"version\":\"1.0.0\",\"servers\":[{\"name\":\"github1\",\"command\":\"npx\",\"args\":[\"-y\",\"@modelcontextprotocol/server-github\"],\"env\":{\"GITHUB_TOKEN\":\"token1\"}},{\"name\":\"github2\",\"command\":\"npx\",\"args\":[\"-y\",\"@modelcontextprotocol/server-github\"],\"env\":{\"GITHUB_TOKEN\":\"token2\"}}]}"]
+    }
+  }
+}
+```
+
+**Option 3: Using a wrapper script**
+
 Add the wrapper to your Claude Desktop configuration:
 
 ```json
@@ -129,14 +221,8 @@ await wrapper.start();
 ```
 
 > **Note:**  
-> The example above uses environment variables (`GITHUB_TOKEN_1`, `GITHUB_TOKEN_2`) to provide authentication tokens to each GitHub server instance.  
-> - **System-wide:** You can set these environment variables in your shell before running the script:
->   ```bash
->   export GITHUB_TOKEN_1=your_token_1
->   export GITHUB_TOKEN_2=your_token_2
->   node wrapper-script.js
->   ```
-> - **Claude Desktop:** If you are using Claude Desktop, you can set environment variables for your script in the configuration. Look for an "Environment Variables" or "env" section in the MCP server configuration:
+> The script example above uses environment variables (`GITHUB_TOKEN_1`, `GITHUB_TOKEN_2`) to provide authentication tokens.  
+> You can set these in the `env` section of Claude Desktop's MCP server configuration:
 >   ```json
 >   {
 >     "mcpServers": {
@@ -151,11 +237,27 @@ await wrapper.start();
 >     }
 >   }
 >   ```
-> If environment variables are not set, the script may fail to authenticate with the servers.
 
 ### Example: Using with VS Code (GitHub Copilot)
 
-For VS Code with GitHub Copilot, create a `.vscode/mcp.json` file in your workspace:
+**Option 1: Using CLI with config file (Recommended - No script file needed)**
+
+Create a config file `mcp-wrapper.json` in your project or home directory, then create `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "wrapped-servers": {
+      "command": "npx",
+      "args": ["-y", "mcp-wrapper", "--config", "/path/to/mcp-wrapper.json"]
+    }
+  }
+}
+```
+
+**Option 2: Using a wrapper script**
+
+Create a `.vscode/mcp.json` file in your workspace:
 
 ```json
 {
@@ -206,12 +308,8 @@ Alternatively, you can configure MCP servers globally in VS Code settings (`sett
 {
   "github.copilot.chat.mcp.servers": {
     "wrapped-servers": {
-      "command": "node",
-      "args": ["/path/to/your/wrapper-script.mjs"],
-      "env": {
-        "GITHUB_TOKEN_1": "your_token_1",
-        "GITHUB_TOKEN_2": "your_token_2"
-      }
+      "command": "npx",
+      "args": ["-y", "mcp-wrapper", "--config", "/path/to/mcp-wrapper.json"]
     }
   }
 }

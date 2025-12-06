@@ -278,4 +278,45 @@ describe("McpWrapper", () => {
       await expect(wrapper.close()).resolves.toBeUndefined();
     });
   });
+
+  describe("reconnectServer", () => {
+    it("should return error for non-existent server", async () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [],
+      };
+
+      const wrapper = new McpWrapper(config);
+      const result = await wrapper.reconnectServer("nonexistent");
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("not found in configuration");
+    });
+
+    it("should return error for already connected server", async () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "server1", command: "node", args: ["server.js"] },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      
+      // Manually add a server to simulate it being connected
+      // This is testing the edge case handling
+      const mockServer = {
+        config: config.servers[0],
+        client: {} as any,
+        transport: {} as any,
+        tools: [],
+      };
+      (wrapper as any).connectedServers.set("server1", mockServer);
+      
+      const result = await wrapper.reconnectServer("server1");
+      
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("already connected");
+    });
+  });
 });

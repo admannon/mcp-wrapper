@@ -41,7 +41,8 @@ async function main() {
 
     // Log wrapped tools info
     const tools = wrapper.getWrappedTools();
-    console.error(`Loaded ${tools.length} tools from ${wrapper.getWrappedTools.length} servers`);
+    const serverNames = new Set(tools.map(t => t.serverName));
+    console.error(`Loaded ${tools.length} tools from ${serverNames.size} servers`);
     for (const tool of tools) {
       console.error(`  - ${tool.prefixedName} (from ${tool.serverName})`);
     }

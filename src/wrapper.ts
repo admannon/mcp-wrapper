@@ -342,14 +342,17 @@ export class McpWrapper {
     for (const serverConfig of this.config.servers) {
       try {
         // Add timeout to prevent hanging on slow or unresponsive servers
+        let timeoutId: NodeJS.Timeout | null = null;
         const connectedServer = await Promise.race([
-          this.connectToServer(serverConfig),
-          new Promise<never>((_, reject) =>
-            setTimeout(
+          this.connectToServer(serverConfig).finally(() => {
+            if (timeoutId) clearTimeout(timeoutId);
+          }),
+          new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(
               () => reject(new Error(`Connection timeout after ${SERVER_CONNECT_TIMEOUT_MS}ms`)),
               SERVER_CONNECT_TIMEOUT_MS
-            )
-          ),
+            );
+          }),
         ]);
         this.connectedServers.set(serverConfig.name, connectedServer);
         

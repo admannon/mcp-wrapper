@@ -156,23 +156,26 @@ These servers are started as child processes and communicate via stdin/stdout. T
 }
 ```
 
-**2. HTTP/SSE-based servers (using `url`)**
+**2. HTTP-based servers (using `url`)**
 
-These servers are accessed via HTTP using Server-Sent Events (SSE) for receiving messages. Useful for connecting to remote MCP servers or servers running in containers.
+These servers are accessed via HTTP. The wrapper automatically tries **Streamable HTTP** (the modern MCP protocol used by VS Code, Claude, and most MCP servers) first, and falls back to **SSE** (legacy protocol) if needed. Useful for connecting to remote MCP servers or servers running in containers.
 
 ```json
 {
   "name": "remote-server",
-  "url": "http://localhost:3000/sse"
+  "url": "http://localhost:3000/mcp"
 }
 ```
 
-**Important:** The `url` must point to an actual MCP server endpoint that supports **standard SSE transport**, not a documentation page or regular website. If you receive a `405 (Method Not Allowed)` or `404 (Not Found)` error, verify that:
-- The URL is correct and the server is running
-- The endpoint actually implements the MCP SSE protocol as defined by `@modelcontextprotocol/sdk`
-- You're using the correct path (typically ending in `/sse` or `/mcp`)
+Examples of supported URLs:
+- `https://nuxt.com/mcp` - Nuxt's public MCP server (works with Streamable HTTP)
+- `http://localhost:3000/mcp` - Your local MCP server
+- `http://localhost:3000/sse` - Legacy SSE endpoint (automatically detected)
 
-**⚠️ Compatibility Note:** Some MCP servers like `https://nuxt.com/mcp` are designed specifically for ChatGPT's connector system and do not support standard SSE transport. To use these with `mcp-wrapper`, you need to run them locally (e.g., using `@nuxtjs/mcp-toolkit` in your own Nuxt project) and connect to your local server endpoint.
+**Important:** The `url` must point to an actual MCP server endpoint. If you receive a `405 (Method Not Allowed)` or `404 (Not Found)` error, verify that:
+- The URL is correct and the server is running
+- The endpoint implements the MCP protocol (Streamable HTTP or SSE)
+- You're using the correct path (typically ending in `/mcp`, `/sse`, or similar)
 
 **Note:** Each server must specify either `command` or `url`, but not both. You can mix both types of servers in the same wrapper configuration.
 
@@ -373,31 +376,24 @@ Now tools from both GitHub servers will be available with prefixed names:
 
 ## Troubleshooting
 
-### SSE Connection Errors
+### HTTP Connection Errors
 
-If you encounter errors when connecting to URL-based (SSE) servers, check the following:
+The wrapper automatically tries **Streamable HTTP** (modern protocol) first, then falls back to **SSE** (legacy) if needed.
 
 **HTTP 405 (Method Not Allowed)**
 ```
-Failed to connect to server "xxx": SSE error: Non-200 status code (405)
+Failed to connect to server "xxx": HTTP 405 (Method Not Allowed)
 ```
-This error means the URL is not a valid MCP SSE endpoint. Common causes:
+This error means the URL doesn't support MCP transports. Common causes:
 - The URL points to a documentation page or website instead of an MCP server
-- The endpoint doesn't support the GET method required by SSE
-- You're using the wrong path (MCP SSE endpoints typically end in `/sse` or `/mcp`)
-- **The endpoint is designed for a specific client** (e.g., `https://nuxt.com/mcp` works with ChatGPT but not standard SSE)
+- The endpoint doesn't implement the MCP protocol
+- You're using the wrong path
 
-**Solution:** Verify that the URL points to an actual MCP server that implements the **standard SSE transport protocol** from `@modelcontextprotocol/sdk`.
-
-**Special Case - Nuxt MCP Server:**
-If you're trying to use `https://nuxt.com/mcp`, note that this is designed specifically for ChatGPT's connector system and doesn't support standard SSE transport. To use Nuxt MCP with this wrapper:
-1. Install `@nuxtjs/mcp-toolkit` in your own Nuxt project
-2. Run your Nuxt dev server locally
-3. Connect to your local endpoint (e.g., `http://localhost:3000/mcp`)
+**Solution:** Verify that the URL points to an actual MCP server endpoint (typically ending in `/mcp`, `/sse`, or similar).
 
 **HTTP 404 (Not Found)**
 ```
-Failed to connect to server "xxx": SSE error: Non-200 status code (404)
+Failed to connect to server "xxx": HTTP 404 (Not Found)
 ```
 This error means the endpoint doesn't exist. Common causes:
 - Typo in the URL
@@ -406,12 +402,19 @@ This error means the endpoint doesn't exist. Common causes:
 
 **Solution:** Double-check the URL and ensure the MCP server is running and accessible.
 
-**General Connection Errors**
+**Supported Remote Servers**
 
-If you're having trouble connecting to an SSE server:
-1. Verify the server is running and accessible: `curl http://your-server-url/sse`
+The wrapper now supports the same remote MCP servers as VS Code and Claude:
+- ✅ `https://nuxt.com/mcp` - Nuxt's public MCP server (Streamable HTTP)
+- ✅ Any MCP server implementing Streamable HTTP or SSE transports
+- ✅ Local MCP servers at `http://localhost:XXXX/mcp`
+
+**General Connection Tips**
+
+If you're having trouble connecting to a remote server:
+1. Test the endpoint is accessible: `curl http://your-server-url/mcp`
 2. Check that the URL is correct and includes the proper path
-3. Ensure the server implements the MCP SSE protocol (not just any SSE endpoint)
+3. Ensure your network allows outbound HTTP/HTTPS connections
 4. For local servers, make sure you're using the correct host and port
 
 ## API

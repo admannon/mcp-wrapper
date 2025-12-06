@@ -40,6 +40,18 @@ export class McpWrapper {
     // Validate server names don't contain separator and are unique
     const seenServerNames = new Set<string>();
     for (const serverConfig of config.servers) {
+      // Validate required fields
+      if (!serverConfig.name || typeof serverConfig.name !== 'string') {
+        throw new Error(
+          `Invalid server configuration: each server must have a 'name' field (string)`
+        );
+      }
+      if (!serverConfig.command || typeof serverConfig.command !== 'string') {
+        throw new Error(
+          `Invalid server configuration for "${serverConfig.name}": each server must have a 'command' field (string)`
+        );
+      }
+      
       if (!isValidServerName(serverConfig.name, this.separator)) {
         throw new Error(
           `Invalid server name "${serverConfig.name}": server names cannot contain the separator "${this.separator}"`

@@ -59,6 +59,71 @@ describe("McpWrapper", () => {
       expect(wrapper).toBeDefined();
     });
 
+    it("should throw error for empty server object", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          {} as any, // Empty server object
+        ],
+      };
+
+      expect(() => new McpWrapper(config)).toThrow(
+        "Invalid server configuration: each server must have a 'name' field (string)"
+      );
+    });
+
+    it("should throw error for server missing name", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { command: "node" } as any,
+        ],
+      };
+
+      expect(() => new McpWrapper(config)).toThrow(
+        "Invalid server configuration: each server must have a 'name' field (string)"
+      );
+    });
+
+    it("should throw error for server missing command", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "server1" } as any,
+        ],
+      };
+
+      expect(() => new McpWrapper(config)).toThrow(
+        'Invalid server configuration for "server1": each server must have a \'command\' field (string)'
+      );
+    });
+
+    it("should throw error for server with non-string name", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: 123, command: "node" } as any,
+        ],
+      };
+
+      expect(() => new McpWrapper(config)).toThrow(
+        "Invalid server configuration: each server must have a 'name' field (string)"
+      );
+    });
+
+    it("should throw error for server with non-string command", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "server1", command: 123 } as any,
+        ],
+      };
+
+      expect(() => new McpWrapper(config)).toThrow(
+        'Invalid server configuration for "server1": each server must have a \'command\' field (string)'
+      );
+    });
+
     it("should throw error for server name containing separator", () => {
       const config: WrapperConfig = {
         name: "test-wrapper",

@@ -106,9 +106,9 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const wrapper = new McpWrapper(config);
-
   try {
+    const wrapper = new McpWrapper(config);
+
     console.error("Connecting to servers...");
     await wrapper.connectToServers();
 

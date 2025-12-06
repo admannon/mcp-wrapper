@@ -212,7 +212,7 @@ export class McpWrapper {
       this.failedServers.delete(serverName);
       this.registerToolMappings(serverName, connectedServer);
       
-      console.error(`Reconnected to server "${serverName}" with ${connectedServer.tools.length} tools`);
+      console.error(`Connected to server "${serverName}" with ${connectedServer.tools.length} tools`);
       return {
         success: true,
         message: `Successfully connected to server "${serverName}" with ${connectedServer.tools.length} tool(s)`,
@@ -337,7 +337,7 @@ export class McpWrapper {
       // Add wrapper management tools
       allTools.push({
         name: "wrapper__reconnect_server",
-        description: "Reconnect to a failed or disconnected MCP server",
+        description: "Reconnect to a failed MCP server",
         inputSchema: {
           type: "object",
           properties: {

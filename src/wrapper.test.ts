@@ -305,6 +305,49 @@ describe("McpWrapper", () => {
     });
   });
 
+  describe("connectToServers - resilient connection handling", () => {
+    it("should skip failed servers and continue with successful ones", async () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "failing-server", command: "nonexistent-command" },
+          { name: "another-failing", command: "also-nonexistent" },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      
+      // connectToServers should not throw even though all servers fail
+      await expect(wrapper.connectToServers()).resolves.toBeUndefined();
+      
+      // Check that no servers are connected
+      expect((wrapper as any).connectedServers.size).toBe(0);
+      
+      // Check that failed servers are tracked
+      expect((wrapper as any).failedServers.size).toBe(2);
+      expect((wrapper as any).failedServers.has("failing-server")).toBe(true);
+      expect((wrapper as any).failedServers.has("another-failing")).toBe(true);
+    });
+
+    it("should track failed servers with error messages", async () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "bad-server", command: "nonexistent" },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      await wrapper.connectToServers();
+      
+      const failedServer = (wrapper as any).failedServers.get("bad-server");
+      expect(failedServer).toBeDefined();
+      expect(failedServer.config).toEqual(config.servers[0]);
+      expect(failedServer.error).toBeDefined();
+      expect(typeof failedServer.error).toBe("string");
+    });
+  });
+
   describe("reconnectServer", () => {
     it("should return error for non-existent server", async () => {
       const config: WrapperConfig = {
@@ -343,6 +386,339 @@ describe("McpWrapper", () => {
       
       expect(result.success).toBe(false);
       expect(result.message).toContain("already connected");
+    });
+
+    it("should attempt to reconnect a failed server", async () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "failed-server", command: "nonexistent" },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      
+      // Simulate a failed server
+      (wrapper as any).failedServers.set("failed-server", {
+        config: config.servers[0],
+        error: "Connection failed",
+      });
+      
+      const result = await wrapper.reconnectServer("failed-server");
+      
+      // Should fail again since the command is still invalid
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("Failed to connect");
+    });
+  });
+
+  describe("wrapper management tools", () => {
+    describe("wrapper__reconnect_server", () => {
+      it("should handle missing serverName parameter", async () => {
+        const config: WrapperConfig = {
+          name: "test-wrapper",
+          servers: [],
+        };
+
+        const wrapper = new McpWrapper(config);
+        await wrapper.start();
+        
+        // Access the handler directly through the private server
+        const server = (wrapper as any).server;
+        const handlers = (server as any)._requestHandlers;
+        const callToolHandler = handlers.get("tools/call");
+        
+        const request = {
+          method: "tools/call",
+          params: {
+            name: "wrapper__reconnect_server",
+            arguments: {},
+          },
+        };
+        
+        const result = await callToolHandler(request);
+        
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toContain("serverName parameter is required");
+        
+        await wrapper.close();
+      });
+
+      it("should handle invalid serverName type", async () => {
+        const config: WrapperConfig = {
+          name: "test-wrapper",
+          servers: [],
+        };
+
+        const wrapper = new McpWrapper(config);
+        await wrapper.start();
+        
+        const server = (wrapper as any).server;
+        const handlers = (server as any)._requestHandlers;
+        const callToolHandler = handlers.get("tools/call");
+        
+        const request = {
+          method: "tools/call",
+          params: {
+            name: "wrapper__reconnect_server",
+            arguments: { serverName: 123 },
+          },
+        };
+        
+        const result = await callToolHandler(request);
+        
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toContain("serverName parameter is required");
+        
+        await wrapper.close();
+      });
+
+      it("should handle non-existent server", async () => {
+        const config: WrapperConfig = {
+          name: "test-wrapper",
+          servers: [],
+        };
+
+        const wrapper = new McpWrapper(config);
+        await wrapper.start();
+        
+        const server = (wrapper as any).server;
+        const handlers = (server as any)._requestHandlers;
+        const callToolHandler = handlers.get("tools/call");
+        
+        const request = {
+          method: "tools/call",
+          params: {
+            name: "wrapper__reconnect_server",
+            arguments: { serverName: "nonexistent" },
+          },
+        };
+        
+        const result = await callToolHandler(request);
+        
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toContain("not found in configuration");
+        
+        await wrapper.close();
+      });
+
+      it("should handle already connected server", async () => {
+        const config: WrapperConfig = {
+          name: "test-wrapper",
+          servers: [
+            { name: "server1", command: "node", args: ["server.js"] },
+          ],
+        };
+
+        const wrapper = new McpWrapper(config);
+        await wrapper.start();
+        
+        // Manually add a server to simulate it being connected
+        const mockServer = {
+          config: config.servers[0],
+          client: {} as any,
+          transport: {} as any,
+          tools: [],
+        };
+        (wrapper as any).connectedServers.set("server1", mockServer);
+        
+        const server = (wrapper as any).server;
+        const handlers = (server as any)._requestHandlers;
+        const callToolHandler = handlers.get("tools/call");
+        
+        const request = {
+          method: "tools/call",
+          params: {
+            name: "wrapper__reconnect_server",
+            arguments: { serverName: "server1" },
+          },
+        };
+        
+        const result = await callToolHandler(request);
+        
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toContain("already connected");
+        
+        await wrapper.close();
+      });
+    });
+
+    describe("wrapper__list_servers", () => {
+      it("should return empty lists when no servers are configured", async () => {
+        const config: WrapperConfig = {
+          name: "test-wrapper",
+          servers: [],
+        };
+
+        const wrapper = new McpWrapper(config);
+        await wrapper.start();
+        
+        const server = (wrapper as any).server;
+        const handlers = (server as any)._requestHandlers;
+        const callToolHandler = handlers.get("tools/call");
+        
+        const request = {
+          method: "tools/call",
+          params: {
+            name: "wrapper__list_servers",
+            arguments: {},
+          },
+        };
+        
+        const result = await callToolHandler(request);
+        
+        expect(result.isError).toBeUndefined();
+        const serverList = JSON.parse(result.content[0].text);
+        expect(serverList.connected).toEqual([]);
+        expect(serverList.failed).toEqual([]);
+        
+        await wrapper.close();
+      });
+
+      it("should list connected servers with tool counts", async () => {
+        const config: WrapperConfig = {
+          name: "test-wrapper",
+          servers: [
+            { name: "server1", command: "node", args: ["server.js"] },
+          ],
+        };
+
+        const wrapper = new McpWrapper(config);
+        await wrapper.start();
+        
+        // Manually add a server to simulate it being connected
+        const mockServer = {
+          config: config.servers[0],
+          client: {} as any,
+          transport: {} as any,
+          tools: [
+            { name: "tool1", description: "Test tool 1", inputSchema: {} },
+            { name: "tool2", description: "Test tool 2", inputSchema: {} },
+          ],
+        };
+        (wrapper as any).connectedServers.set("server1", mockServer);
+        
+        const server = (wrapper as any).server;
+        const handlers = (server as any)._requestHandlers;
+        const callToolHandler = handlers.get("tools/call");
+        
+        const request = {
+          method: "tools/call",
+          params: {
+            name: "wrapper__list_servers",
+            arguments: {},
+          },
+        };
+        
+        const result = await callToolHandler(request);
+        
+        expect(result.isError).toBeUndefined();
+        const serverList = JSON.parse(result.content[0].text);
+        expect(serverList.connected).toHaveLength(1);
+        expect(serverList.connected[0]).toEqual({
+          name: "server1",
+          toolCount: 2,
+          status: "connected",
+        });
+        expect(serverList.failed).toEqual([]);
+        
+        await wrapper.close();
+      });
+
+      it("should list failed servers with error messages", async () => {
+        const config: WrapperConfig = {
+          name: "test-wrapper",
+          servers: [
+            { name: "failed-server", command: "nonexistent" },
+          ],
+        };
+
+        const wrapper = new McpWrapper(config);
+        await wrapper.start();
+        
+        // Simulate a failed server
+        (wrapper as any).failedServers.set("failed-server", {
+          config: config.servers[0],
+          error: "Connection refused",
+        });
+        
+        const server = (wrapper as any).server;
+        const handlers = (server as any)._requestHandlers;
+        const callToolHandler = handlers.get("tools/call");
+        
+        const request = {
+          method: "tools/call",
+          params: {
+            name: "wrapper__list_servers",
+            arguments: {},
+          },
+        };
+        
+        const result = await callToolHandler(request);
+        
+        expect(result.isError).toBeUndefined();
+        const serverList = JSON.parse(result.content[0].text);
+        expect(serverList.connected).toEqual([]);
+        expect(serverList.failed).toHaveLength(1);
+        expect(serverList.failed[0]).toEqual({
+          name: "failed-server",
+          status: "failed",
+          error: "Connection refused",
+        });
+        
+        await wrapper.close();
+      });
+
+      it("should list both connected and failed servers", async () => {
+        const config: WrapperConfig = {
+          name: "test-wrapper",
+          servers: [
+            { name: "good-server", command: "node" },
+            { name: "bad-server", command: "nonexistent" },
+          ],
+        };
+
+        const wrapper = new McpWrapper(config);
+        await wrapper.start();
+        
+        // Add a connected server
+        const mockServer = {
+          config: config.servers[0],
+          client: {} as any,
+          transport: {} as any,
+          tools: [{ name: "tool1", description: "Test", inputSchema: {} }],
+        };
+        (wrapper as any).connectedServers.set("good-server", mockServer);
+        
+        // Add a failed server
+        (wrapper as any).failedServers.set("bad-server", {
+          config: config.servers[1],
+          error: "Failed to connect",
+        });
+        
+        const server = (wrapper as any).server;
+        const handlers = (server as any)._requestHandlers;
+        const callToolHandler = handlers.get("tools/call");
+        
+        const request = {
+          method: "tools/call",
+          params: {
+            name: "wrapper__list_servers",
+            arguments: {},
+          },
+        };
+        
+        const result = await callToolHandler(request);
+        
+        expect(result.isError).toBeUndefined();
+        const serverList = JSON.parse(result.content[0].text);
+        expect(serverList.connected).toHaveLength(1);
+        expect(serverList.connected[0].name).toBe("good-server");
+        expect(serverList.failed).toHaveLength(1);
+        expect(serverList.failed[0].name).toBe("bad-server");
+        
+        await wrapper.close();
+      });
     });
   });
 });

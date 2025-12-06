@@ -443,19 +443,21 @@ Each child server connection has a **30-second timeout** to prevent the wrapper 
 **Scenario 1**: One server fails, others succeed
 ```
 Failed to connect to server "unavailable": Error: spawn ENOENT
+Skipping server "unavailable", will continue with remaining servers
 Connected to server "github" with 15 tools
 Connected to server "filesystem" with 8 tools
-Connected to 2 server(s), 1 failed
+Successfully connected to 2 server(s)
+Failed to connect to 1 server(s): unavailable
 ```
 
 **Scenario 2**: All servers fail
 ```
-Failed to connect to server "server1": Error: ...
-Failed to connect to server "server2": Error: ...
-Warning: No servers connected successfully
-All server connections failed:
-  - server1: spawn ENOENT
-  - server2: Connection timeout after 30000ms
+Failed to connect to server "server1": Error: spawn ENOENT
+Skipping server "server1", will continue with remaining servers
+Failed to connect to server "server2": Connection timeout after 30000ms
+Skipping server "server2", will continue with remaining servers
+Successfully connected to 0 server(s)
+Failed to connect to 2 server(s): server1, server2
 ```
 
 Even in scenario 2, the wrapper starts successfully (with 0 tools) rather than crashing, allowing clients to complete initialization and receive clear error messages.

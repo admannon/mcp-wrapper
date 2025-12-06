@@ -320,6 +320,48 @@ describe("McpWrapper", () => {
       expect(failedServer.error).toBeDefined();
       expect(typeof failedServer.error).toBe("string");
     });
+
+    it("should handle connection timeout", async () => {
+      // Mock a server that takes too long to connect
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "slow-server", command: "sleep", args: ["60"] }, // Will timeout before 60 seconds
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      
+      // Should complete without throwing, even though server times out
+      await expect(wrapper.connectToServers()).resolves.toBeUndefined();
+      
+      // Server should be tracked as failed
+      expect((wrapper as any).failedServers.has("slow-server")).toBe(true);
+      const failedServer = (wrapper as any).failedServers.get("slow-server");
+      expect(failedServer.error).toContain("timeout");
+    }, 35000); // Extend timeout to 35 seconds to accommodate the 30 second connection timeout
+
+    it("should clear timeout when connection succeeds quickly", async () => {
+      // This test verifies that timeouts are properly cleaned up
+      // Using a simple command that completes quickly
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "fast-server", command: "echo", args: ["test"] },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      
+      // Should fail to connect (echo is not an MCP server) but shouldn't timeout
+      await wrapper.connectToServers();
+      
+      // Server should be tracked as failed due to connection error, not timeout
+      const failedServer = (wrapper as any).failedServers.get("fast-server");
+      expect(failedServer).toBeDefined();
+      // Error should not mention timeout
+      expect(failedServer.error).not.toContain("timeout");
+    });
   });
 
   describe("reconnectServer", () => {

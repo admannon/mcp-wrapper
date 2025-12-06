@@ -15,6 +15,7 @@ import { prefixToolName as utilPrefixToolName, isValidServerName } from "./utils
 const DEFAULT_SEPARATOR = "__";
 const DEFAULT_VERSION = "1.0.0";
 const SERVER_CLOSE_TIMEOUT_MS = 5000;
+const SERVER_CONNECT_TIMEOUT_MS = 30000; // 30 seconds timeout for connecting to child servers
 
 /**
  * Error class for server configuration validation errors
@@ -340,7 +341,16 @@ export class McpWrapper {
 
     for (const serverConfig of this.config.servers) {
       try {
-        const connectedServer = await this.connectToServer(serverConfig);
+        // Add timeout to prevent hanging on slow or unresponsive servers
+        const connectedServer = await Promise.race([
+          this.connectToServer(serverConfig),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error(`Connection timeout after ${SERVER_CONNECT_TIMEOUT_MS}ms`)),
+              SERVER_CONNECT_TIMEOUT_MS
+            )
+          ),
+        ]);
         this.connectedServers.set(serverConfig.name, connectedServer);
         
         // Remove from failed servers if it was previously failing

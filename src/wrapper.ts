@@ -181,14 +181,25 @@ export class McpWrapper {
         console.warn(`Streamable HTTP connection failed, trying SSE fallback for "${serverConfig.name}"...`);
         
         try {
+          // Create a new client for SSE fallback to ensure clean state
+          const sseClient = new Client(
+            {
+              name: `${this.config.name}-client`,
+              version: this.config.version ?? DEFAULT_VERSION,
+            },
+            {
+              capabilities: {},
+            }
+          );
           transport = new SSEClientTransport(parsedUrl);
-          await client.connect(transport);
-          // Success with SSE fallback
+          await sseClient.connect(transport);
+          // Success with SSE fallback - replace the original client
+          Object.assign(client, sseClient);
           console.warn(`Connected to "${serverConfig.name}" using legacy SSE transport`);
         } catch (sseError) {
           // Both transports failed, provide helpful error message
           if (sseError instanceof SseError) {
-            const statusCode = sseError.code;
+            const statusCode = sseError.code ?? "unknown";
             
             if (statusCode === 405) {
               throw new Error(
@@ -213,7 +224,7 @@ export class McpWrapper {
           // Re-throw if not an SseError
           throw new Error(
             `Server "${serverConfig.name}" at URL "${serverConfig.url}" failed to connect. ` +
-            `Original error: ${error instanceof Error ? error.message : String(error)}. ` +
+            `Streamable HTTP error: ${error instanceof Error ? error.message : String(error)}. ` +
             `SSE fallback error: ${sseError instanceof Error ? sseError.message : String(sseError)}`
           );
         }

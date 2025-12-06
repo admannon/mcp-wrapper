@@ -412,7 +412,8 @@ The wrapper now supports the same remote MCP servers as VS Code and Claude:
 **General Connection Tips**
 
 If you're having trouble connecting to a remote server:
-1. Test the endpoint is accessible: `curl http://your-server-url/mcp`
+1. Test basic connectivity to the endpoint (does not test MCP protocol): `curl http://your-server-url/mcp`
+   For Streamable HTTP MCP endpoints, test protocol support with: `curl -X POST http://your-server-url/mcp`
 2. Check that the URL is correct and includes the proper path
 3. Ensure your network allows outbound HTTP/HTTPS connections
 4. For local servers, make sure you're using the correct host and port

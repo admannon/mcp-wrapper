@@ -128,6 +128,31 @@ await wrapper.connectToServers();
 await wrapper.start();
 ```
 
+> **Note:**  
+> The example above uses environment variables (`GITHUB_TOKEN_1`, `GITHUB_TOKEN_2`) to provide authentication tokens to each GitHub server instance.  
+> - **System-wide:** You can set these environment variables in your shell before running the script:
+>   ```bash
+>   export GITHUB_TOKEN_1=your_token_1
+>   export GITHUB_TOKEN_2=your_token_2
+>   node wrapper-script.js
+>   ```
+> - **Claude Desktop:** If you are using Claude Desktop, you can set environment variables for your script in the configuration. Look for an "Environment Variables" or "env" section in the MCP server configuration:
+>   ```json
+>   {
+>     "mcpServers": {
+>       "wrapped-servers": {
+>         "command": "node",
+>         "args": ["/path/to/your/wrapper-script.js"],
+>         "env": {
+>           "GITHUB_TOKEN_1": "your_token_1",
+>           "GITHUB_TOKEN_2": "your_token_2"
+>         }
+>       }
+>     }
+>   }
+>   ```
+> If environment variables are not set, the script may fail to authenticate with the servers.
+
 Now tools from both GitHub servers will be available with prefixed names:
 - `github1__create_issue`
 - `github1__list_pull_requests`

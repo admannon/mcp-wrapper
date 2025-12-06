@@ -8,9 +8,10 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { WrapperConfig, WrappedServerConfig } from "./types.js";
-import { prefixToolName as utilPrefixToolName } from "./utils.js";
+import { prefixToolName as utilPrefixToolName, isValidServerName } from "./utils.js";
 
 const DEFAULT_SEPARATOR = "__";
+const SERVER_CLOSE_TIMEOUT_MS = 5000;
 
 interface ConnectedServer {
   config: WrappedServerConfig;
@@ -33,6 +34,22 @@ export class McpWrapper {
   constructor(config: WrapperConfig) {
     this.config = config;
     this.separator = config.separator ?? DEFAULT_SEPARATOR;
+
+    // Validate server names don't contain separator and are unique
+    const seenServerNames = new Set<string>();
+    for (const serverConfig of config.servers) {
+      if (!isValidServerName(serverConfig.name, this.separator)) {
+        throw new Error(
+          `Invalid server name "${serverConfig.name}": server names cannot contain the separator "${this.separator}"`
+        );
+      }
+      if (seenServerNames.has(serverConfig.name)) {
+        throw new Error(
+          `Duplicate server name "${serverConfig.name}": each server must have a unique name`
+        );
+      }
+      seenServerNames.add(serverConfig.name);
+    }
 
     this.server = new Server(
       {
@@ -57,9 +74,9 @@ export class McpWrapper {
   }
 
   /**
-   * Parses a prefixed tool name and returns the server name and original tool name
+   * Looks up tool mapping from the tool name to server map
    */
-  private parseToolName(prefixedName: string): { serverName: string; originalName: string } | null {
+  private lookupToolMapping(prefixedName: string): { serverName: string; originalName: string } | null {
     const mapping = this.toolToServerMap.get(prefixedName);
     if (mapping) {
       return mapping;
@@ -111,9 +128,20 @@ export class McpWrapper {
         const connectedServer = await this.connectToServer(serverConfig);
         this.connectedServers.set(serverConfig.name, connectedServer);
 
-        // Register tool mappings
+        // Register tool mappings with collision detection
         for (const tool of connectedServer.tools) {
           const prefixedName = this.prefixToolName(serverConfig.name, tool.name);
+          
+          // Warn about tool name collisions
+          if (this.toolToServerMap.has(prefixedName)) {
+            const previous = this.toolToServerMap.get(prefixedName);
+            console.warn(
+              `Tool name collision detected: "${prefixedName}" is being overwritten. ` +
+              `Previous: server "${previous?.serverName}", tool "${previous?.originalName}". ` +
+              `New: server "${serverConfig.name}", tool "${tool.name}".`
+            );
+          }
+          
           this.toolToServerMap.set(prefixedName, {
             serverName: serverConfig.name,
             originalName: tool.name,
@@ -123,9 +151,29 @@ export class McpWrapper {
         console.error(`Connected to server "${serverConfig.name}" with ${connectedServer.tools.length} tools`);
       } catch (error) {
         console.error(`Failed to connect to server "${serverConfig.name}":`, error);
+        
+        // Clean up already connected servers before throwing
+        await this.cleanupConnectedServers();
+        
         throw error;
       }
     }
+  }
+
+  /**
+   * Cleans up all connected servers (used during error recovery)
+   */
+  private async cleanupConnectedServers(): Promise<void> {
+    for (const [serverName, connectedServer] of this.connectedServers) {
+      try {
+        await connectedServer.transport.close();
+        console.error(`Cleaned up connection to server "${serverName}"`);
+      } catch (closeError) {
+        console.error(`Error cleaning up connection to "${serverName}":`, closeError);
+      }
+    }
+    this.connectedServers.clear();
+    this.toolToServerMap.clear();
   }
 
   /**
@@ -154,7 +202,7 @@ export class McpWrapper {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name: prefixedName, arguments: args } = request.params;
 
-      const mapping = this.parseToolName(prefixedName);
+      const mapping = this.lookupToolMapping(prefixedName);
       if (!mapping) {
         return {
           content: [
@@ -226,7 +274,18 @@ export class McpWrapper {
     }
     this.connectedServers.clear();
     this.toolToServerMap.clear();
-    await this.server.close();
+    
+    // Add a timeout to server.close() to prevent hanging
+    try {
+      await Promise.race([
+        this.server.close(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout closing wrapper server")), SERVER_CLOSE_TIMEOUT_MS)
+        ),
+      ]);
+    } catch (error) {
+      console.error("Error closing wrapper server:", error);
+    }
   }
 
   /**

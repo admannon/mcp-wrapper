@@ -336,6 +336,8 @@ export class McpWrapper {
    * Skips servers that fail to connect and tracks them for retry
    */
   async connectToServers(): Promise<void> {
+    const failures: Array<{ serverName: string; error: unknown }> = [];
+
     for (const serverConfig of this.config.servers) {
       try {
         const connectedServer = await this.connectToServer(serverConfig);

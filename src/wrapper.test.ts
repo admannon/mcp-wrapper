@@ -219,7 +219,7 @@ describe("McpWrapper", () => {
   });
 
   describe("connectToServers", () => {
-    it("should fail when server has neither command nor url", async () => {
+    it("should continue when server has neither command nor url", async () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
         servers: [
@@ -229,12 +229,12 @@ describe("McpWrapper", () => {
 
       const wrapper = new McpWrapper(config);
       
-      await expect(wrapper.connectToServers()).rejects.toThrow(
-        'Server "server1" must specify either "command" or "url"'
-      );
+      // Should not throw, but should complete with no connected servers
+      await wrapper.connectToServers();
+      expect(wrapper.getWrappedTools()).toHaveLength(0);
     });
 
-    it("should fail when server has both command and url", async () => {
+    it("should continue when server has both command and url", async () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
         servers: [
@@ -244,12 +244,12 @@ describe("McpWrapper", () => {
 
       const wrapper = new McpWrapper(config);
       
-      await expect(wrapper.connectToServers()).rejects.toThrow(
-        'Server "server1" cannot specify both "command" and "url"'
-      );
+      // Should not throw, but should complete with no connected servers
+      await wrapper.connectToServers();
+      expect(wrapper.getWrappedTools()).toHaveLength(0);
     });
 
-    it("should fail when server has invalid URL format", async () => {
+    it("should continue when server has invalid URL format", async () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
         servers: [
@@ -259,9 +259,9 @@ describe("McpWrapper", () => {
 
       const wrapper = new McpWrapper(config);
       
-      await expect(wrapper.connectToServers()).rejects.toThrow(
-        'Server "server1" has invalid URL format: "not-a-valid-url"'
-      );
+      // Should not throw, but should complete with no connected servers
+      await wrapper.connectToServers();
+      expect(wrapper.getWrappedTools()).toHaveLength(0);
     });
   });
 

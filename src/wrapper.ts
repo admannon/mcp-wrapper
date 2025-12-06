@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
@@ -17,7 +18,7 @@ const SERVER_CLOSE_TIMEOUT_MS = 5000;
 interface ConnectedServer {
   config: WrappedServerConfig;
   client: Client;
-  transport: StdioClientTransport;
+  transport: StdioClientTransport | SSEClientTransport;
   tools: Tool[];
 }
 
@@ -89,12 +90,36 @@ export class McpWrapper {
    * Connects to a single underlying MCP server
    */
   private async connectToServer(serverConfig: WrappedServerConfig): Promise<ConnectedServer> {
-    const transport = new StdioClientTransport({
-      command: serverConfig.command,
-      args: serverConfig.args,
-      env: serverConfig.env,
-      cwd: serverConfig.cwd,
-    });
+    // Validate that either command or url is provided, but not both
+    const hasCommand = !!serverConfig.command;
+    const hasUrl = !!serverConfig.url;
+
+    if (!hasCommand && !hasUrl) {
+      throw new Error(
+        `Server "${serverConfig.name}" must specify either "command" or "url"`
+      );
+    }
+
+    if (hasCommand && hasUrl) {
+      throw new Error(
+        `Server "${serverConfig.name}" cannot specify both "command" and "url"`
+      );
+    }
+
+    let transport: StdioClientTransport | SSEClientTransport;
+
+    if (hasUrl) {
+      // Use SSE transport for URL-based servers
+      transport = new SSEClientTransport(new URL(serverConfig.url!));
+    } else {
+      // Use stdio transport for command-based servers
+      transport = new StdioClientTransport({
+        command: serverConfig.command!,
+        args: serverConfig.args,
+        env: serverConfig.env,
+        cwd: serverConfig.cwd,
+      });
+    }
 
     const client = new Client(
       {

@@ -8,24 +8,31 @@ export interface WrappedServerConfig {
   name: string;
 
   /**
-   * Command to execute to start the MCP server
+   * Command to execute to start the MCP server (for stdio transport)
+   * Either command or url must be specified, but not both
    */
-  command: string;
+  command?: string;
 
   /**
-   * Arguments to pass to the command
+   * Arguments to pass to the command (only used with command)
    */
   args?: string[];
 
   /**
-   * Environment variables for the server process
+   * Environment variables for the server process (only used with command)
    */
   env?: Record<string, string>;
 
   /**
-   * Working directory for the server process
+   * Working directory for the server process (only used with command)
    */
   cwd?: string;
+
+  /**
+   * URL to connect to the MCP server (for SSE transport)
+   * Either command or url must be specified, but not both
+   */
+  url?: string;
 }
 
 /**

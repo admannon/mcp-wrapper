@@ -3,7 +3,7 @@ import type { WrapperConfig, WrappedServerConfig } from "./types.js";
 
 describe("types", () => {
   describe("WrappedServerConfig", () => {
-    it("should allow minimal configuration", () => {
+    it("should allow minimal configuration with command", () => {
       const config: WrappedServerConfig = {
         name: "test-server",
         command: "node",
@@ -13,9 +13,10 @@ describe("types", () => {
       expect(config.args).toBeUndefined();
       expect(config.env).toBeUndefined();
       expect(config.cwd).toBeUndefined();
+      expect(config.url).toBeUndefined();
     });
 
-    it("should allow full configuration", () => {
+    it("should allow full configuration with command", () => {
       const config: WrappedServerConfig = {
         name: "test-server",
         command: "node",
@@ -28,6 +29,20 @@ describe("types", () => {
       expect(config.args).toEqual(["server.js"]);
       expect(config.env).toEqual({ NODE_ENV: "production" });
       expect(config.cwd).toBe("/app");
+      expect(config.url).toBeUndefined();
+    });
+
+    it("should allow minimal configuration with url", () => {
+      const config: WrappedServerConfig = {
+        name: "test-server",
+        url: "http://localhost:3000/sse",
+      };
+      expect(config.name).toBe("test-server");
+      expect(config.url).toBe("http://localhost:3000/sse");
+      expect(config.command).toBeUndefined();
+      expect(config.args).toBeUndefined();
+      expect(config.env).toBeUndefined();
+      expect(config.cwd).toBeUndefined();
     });
   });
 

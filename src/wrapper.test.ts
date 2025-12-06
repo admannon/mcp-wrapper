@@ -113,6 +113,31 @@ describe("McpWrapper", () => {
       const wrapper = new McpWrapper(config);
       expect(wrapper).toBeDefined();
     });
+
+    it("should allow URL-based server configuration", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "server1", url: "http://localhost:3000/sse" },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      expect(wrapper).toBeDefined();
+    });
+
+    it("should allow mixed command and URL-based servers", () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "server1", command: "node", args: ["server1.js"] },
+          { name: "server2", url: "http://localhost:3000/sse" },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      expect(wrapper).toBeDefined();
+    });
   });
 
   describe("getWrappedTools", () => {
@@ -125,6 +150,38 @@ describe("McpWrapper", () => {
       const wrapper = new McpWrapper(config);
       const tools = wrapper.getWrappedTools();
       expect(tools).toEqual([]);
+    });
+  });
+
+  describe("connectToServers", () => {
+    it("should fail when server has neither command nor url", async () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "server1" } as WrappedServerConfig,
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      
+      await expect(wrapper.connectToServers()).rejects.toThrow(
+        'Server "server1" must specify either "command" or "url"'
+      );
+    });
+
+    it("should fail when server has both command and url", async () => {
+      const config: WrapperConfig = {
+        name: "test-wrapper",
+        servers: [
+          { name: "server1", command: "node", url: "http://localhost:3000/sse" },
+        ],
+      };
+
+      const wrapper = new McpWrapper(config);
+      
+      await expect(wrapper.connectToServers()).rejects.toThrow(
+        'Server "server1" cannot specify both "command" and "url"'
+      );
     });
   });
 

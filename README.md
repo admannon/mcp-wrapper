@@ -53,6 +53,10 @@ Example config file (`mcp-wrapper.json`):
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": { "GITHUB_TOKEN": "token2" }
+    },
+    {
+      "name": "remote",
+      "url": "http://localhost:3000/sse"
     }
   ]
 }
@@ -77,6 +81,10 @@ const wrapper = new McpWrapper({
       name: "filesystem",
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"],
+    },
+    {
+      name: "remote",
+      url: "http://localhost:3000/sse",
     },
   ],
   separator: "__", // optional, default is "__"
@@ -112,19 +120,54 @@ interface WrappedServerConfig {
   // Unique prefix name for this server
   name: string;
 
-  // Command to execute to start the MCP server
-  command: string;
+  // Command to execute to start the MCP server (for stdio transport)
+  // Either command or url must be specified, but not both
+  command?: string;
 
-  // Arguments to pass to the command
+  // Arguments to pass to the command (only used with command)
   args?: string[];
 
-  // Environment variables for the server process
+  // Environment variables for the server process (only used with command)
   env?: Record<string, string>;
 
-  // Working directory for the server process
+  // Working directory for the server process (only used with command)
   cwd?: string;
+
+  // URL to connect to the MCP server (for SSE transport)
+  // Either command or url must be specified, but not both
+  url?: string;
 }
 ```
+
+#### Server Types
+
+The wrapper supports two types of MCP server connections:
+
+**1. Stdio-based servers (using `command`)**
+
+These servers are started as child processes and communicate via stdin/stdout. This is the traditional MCP server approach.
+
+```json
+{
+  "name": "local-server",
+  "command": "npx",
+  "args": ["-y", "@modelcontextprotocol/server-github"],
+  "env": { "GITHUB_TOKEN": "your_token" }
+}
+```
+
+**2. HTTP/SSE-based servers (using `url`)**
+
+These servers are accessed via HTTP using Server-Sent Events (SSE) for receiving messages. Useful for connecting to remote MCP servers or servers running in containers.
+
+```json
+{
+  "name": "remote-server",
+  "url": "http://localhost:3000/sse"
+}
+```
+
+**Note:** Each server must specify either `command` or `url`, but not both. You can mix both types of servers in the same wrapper configuration.
 
 ### Example: Using with Claude Desktop
 

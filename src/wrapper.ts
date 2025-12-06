@@ -111,19 +111,15 @@ export class McpWrapper {
     if (serverConfig.url) {
       // Use SSE transport for URL-based servers
       transport = new SSEClientTransport(new URL(serverConfig.url));
-    } else if (serverConfig.command) {
+    } else {
       // Use stdio transport for command-based servers
+      // serverConfig.command is guaranteed to exist due to validation above
       transport = new StdioClientTransport({
-        command: serverConfig.command,
+        command: serverConfig.command as string,
         args: serverConfig.args,
         env: serverConfig.env,
         cwd: serverConfig.cwd,
       });
-    } else {
-      // This should never happen due to validation above, but TypeScript doesn't know that
-      throw new Error(
-        `Server "${serverConfig.name}" must specify either "command" or "url"`
-      );
     }
 
     const client = new Client(

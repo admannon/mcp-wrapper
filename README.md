@@ -153,6 +153,70 @@ await wrapper.start();
 >   ```
 > If environment variables are not set, the script may fail to authenticate with the servers.
 
+### Example: Using with VS Code (GitHub Copilot)
+
+For VS Code with GitHub Copilot, create a `.vscode/mcp.json` file in your workspace:
+
+```json
+{
+  "servers": {
+    "wrapped-servers": {
+      "command": "node",
+      "args": ["/path/to/your/wrapper-script.mjs"],
+      "env": {
+        "GITHUB_TOKEN_1": "your_token_1",
+        "GITHUB_TOKEN_2": "your_token_2"
+      }
+    }
+  }
+}
+```
+
+Where `wrapper-script.mjs` contains:
+
+```javascript
+import { McpWrapper } from "mcp-wrapper";
+
+const wrapper = new McpWrapper({
+  name: "wrapped-servers",
+  version: "1.0.0",
+  servers: [
+    {
+      name: "github1",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-github"],
+      env: { GITHUB_TOKEN: process.env.GITHUB_TOKEN_1 },
+    },
+    {
+      name: "github2",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-github"],
+      env: { GITHUB_TOKEN: process.env.GITHUB_TOKEN_2 },
+    },
+  ],
+});
+
+await wrapper.connectToServers();
+await wrapper.start();
+```
+
+Alternatively, you can configure MCP servers globally in VS Code settings (`settings.json`):
+
+```json
+{
+  "github.copilot.chat.mcp.servers": {
+    "wrapped-servers": {
+      "command": "node",
+      "args": ["/path/to/your/wrapper-script.mjs"],
+      "env": {
+        "GITHUB_TOKEN_1": "your_token_1",
+        "GITHUB_TOKEN_2": "your_token_2"
+      }
+    }
+  }
+}
+```
+
 Now tools from both GitHub servers will be available with prefixed names:
 - `github1__create_issue`
 - `github1__list_pull_requests`

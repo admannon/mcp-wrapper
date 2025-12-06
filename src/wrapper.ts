@@ -190,56 +190,14 @@ export class McpWrapper {
   }
 
   /**
-   * Reconnects to a specific server by name
+   * Helper method to connect and register a server
    */
-  async reconnectServer(serverName: string): Promise<{ success: boolean; message: string }> {
-    // Check if server is in failed list
-    const failedServer = this.failedServers.get(serverName);
-    if (!failedServer) {
-      // Check if it's already connected
-      if (this.connectedServers.has(serverName)) {
-        return {
-          success: false,
-          message: `Server "${serverName}" is already connected`,
-        };
-      }
-      
-      // Check if it exists in config
-      const serverConfig = this.config.servers.find(s => s.name === serverName);
-      if (!serverConfig) {
-        return {
-          success: false,
-          message: `Server "${serverName}" not found in configuration`,
-        };
-      }
-      
-      // Try to connect
-      try {
-        const connectedServer = await this.connectToServer(serverConfig);
-        this.connectedServers.set(serverName, connectedServer);
-        this.registerToolMappings(serverName, connectedServer);
-        
-        console.error(`Reconnected to server "${serverName}" with ${connectedServer.tools.length} tools`);
-        return {
-          success: true,
-          message: `Successfully connected to server "${serverName}" with ${connectedServer.tools.length} tool(s)`,
-        };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.failedServers.set(serverName, {
-          config: serverConfig,
-          error: errorMessage,
-        });
-        return {
-          success: false,
-          message: `Failed to connect to server "${serverName}": ${errorMessage}`,
-        };
-      }
-    }
-    
-    // Try to reconnect a failed server
+  private async connectAndRegisterServer(
+    serverName: string,
+    serverConfig: WrappedServerConfig
+  ): Promise<{ success: boolean; message: string }> {
     try {
-      const connectedServer = await this.connectToServer(failedServer.config);
+      const connectedServer = await this.connectToServer(serverConfig);
       this.connectedServers.set(serverName, connectedServer);
       this.failedServers.delete(serverName);
       this.registerToolMappings(serverName, connectedServer);
@@ -247,19 +205,49 @@ export class McpWrapper {
       console.error(`Reconnected to server "${serverName}" with ${connectedServer.tools.length} tools`);
       return {
         success: true,
-        message: `Successfully reconnected to server "${serverName}" with ${connectedServer.tools.length} tool(s)`,
+        message: `Successfully connected to server "${serverName}" with ${connectedServer.tools.length} tool(s)`,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.failedServers.set(serverName, {
-        config: failedServer.config,
+        config: serverConfig,
         error: errorMessage,
       });
       return {
         success: false,
-        message: `Failed to reconnect to server "${serverName}": ${errorMessage}`,
+        message: `Failed to connect to server "${serverName}": ${errorMessage}`,
       };
     }
+  }
+
+  /**
+   * Reconnects to a specific server by name
+   */
+  async reconnectServer(serverName: string): Promise<{ success: boolean; message: string }> {
+    // Check if it's already connected
+    if (this.connectedServers.has(serverName)) {
+      return {
+        success: false,
+        message: `Server "${serverName}" is already connected`,
+      };
+    }
+    
+    // Check if server is in failed list
+    const failedServer = this.failedServers.get(serverName);
+    if (failedServer) {
+      return this.connectAndRegisterServer(serverName, failedServer.config);
+    }
+    
+    // Check if it exists in config
+    const serverConfig = this.config.servers.find(s => s.name === serverName);
+    if (!serverConfig) {
+      return {
+        success: false,
+        message: `Server "${serverName}" not found in configuration`,
+      };
+    }
+    
+    return this.connectAndRegisterServer(serverName, serverConfig);
   }
 
   /**

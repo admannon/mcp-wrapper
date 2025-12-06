@@ -145,7 +145,7 @@ export class McpWrapper {
         parsedUrl = new URL(serverConfig.url);
       } catch (error) {
         throw new ConfigurationError(
-          `Server "${serverConfig.name}" has invalid URL: "${serverConfig.url}"`
+          `Server "${serverConfig.name}" has invalid URL format: "${serverConfig.url}"`
         );
       }
 

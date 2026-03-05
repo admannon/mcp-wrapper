@@ -57,3 +57,31 @@ export function isValidToolName(
 ): boolean {
   return !toolName.includes(separator);
 }
+
+/**
+ * Environment variables that are missing from the SDK's DEFAULT_INHERITED_ENV_VARS
+ * whitelist on Windows but are required by common tools (e.g. OpenSSH needs ProgramData).
+ */
+const ADDITIONAL_WINDOWS_ENV_VARS = [
+  'ProgramData',
+  'ALLUSERSPROFILE',
+];
+
+/**
+ * Returns supplemental environment variables that should be passed to child processes
+ * to work around the SDK's restrictive env whitelist on Windows.
+ * On non-Windows platforms, returns an empty object.
+ */
+export function getSupplementalEnv(): Record<string, string> {
+  if (process.platform !== 'win32') {
+    return {};
+  }
+  const env: Record<string, string> = {};
+  for (const key of ADDITIONAL_WINDOWS_ENV_VARS) {
+    const value = process.env[key];
+    if (value !== undefined) {
+      env[key] = value;
+    }
+  }
+  return env;
+}

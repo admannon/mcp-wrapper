@@ -1,6 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
+import { execFileSync } from "node:child_process";
 import { McpWrapper } from "./wrapper.js";
-import type { WrapperConfig } from "./types.js";
+import type { WrapperConfig, WrappedServerConfig } from "./types.js";
+
+function hasSleepCommand(): boolean {
+  try {
+    execFileSync("sleep", ["0"], { stdio: "ignore", timeout: 5000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 describe("McpWrapper", () => {
   describe("constructor", () => {
@@ -280,6 +290,11 @@ describe("McpWrapper", () => {
   });
 
   describe("connectToServers - resilient connection handling", () => {
+    // NOTE: Tests in this section deliberately use nonexistent commands to verify
+    // failure handling. The OS will print "'xxx' is not recognized as an internal
+    // or external command" to stderr — this is expected and confirms the commands
+    // actually failed at the OS level.
+
     it("should skip failed servers and continue with successful ones", async () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
@@ -321,7 +336,7 @@ describe("McpWrapper", () => {
       expect(typeof failedServer.error).toBe("string");
     });
 
-    it("should handle connection timeout", async () => {
+    it.skipIf(!hasSleepCommand())("should handle connection timeout", async () => {
       // Mock a server that takes too long to connect
       const config: WrapperConfig = {
         name: "test-wrapper",
@@ -393,7 +408,7 @@ describe("McpWrapper", () => {
       const mockServer = {
         config: config.servers[0],
         client: {} as any,
-        transport: {} as any,
+        transport: { close: async () => {} } as any,
         tools: [],
       };
       (wrapper as any).connectedServers.set("server1", mockServer);
@@ -404,6 +419,8 @@ describe("McpWrapper", () => {
       expect(result.message).toContain("already connected");
     });
 
+    // NOTE: This test uses a nonexistent command to verify reconnection failure.
+    // The OS stderr message "'nonexistent' is not recognized..." is expected.
     it("should attempt to reconnect a failed server", async () => {
       const config: WrapperConfig = {
         name: "test-wrapper",
@@ -533,7 +550,7 @@ describe("McpWrapper", () => {
         const mockServer = {
           config: config.servers[0],
           client: {} as any,
-          transport: {} as any,
+          transport: { close: async () => {} } as any,
           tools: [],
         };
         (wrapper as any).connectedServers.set("server1", mockServer);
@@ -606,7 +623,7 @@ describe("McpWrapper", () => {
         const mockServer = {
           config: config.servers[0],
           client: {} as any,
-          transport: {} as any,
+          transport: { close: async () => {} } as any,
           tools: [
             { name: "tool1", description: "Test tool 1", inputSchema: {} },
             { name: "tool2", description: "Test tool 2", inputSchema: {} },
@@ -701,7 +718,7 @@ describe("McpWrapper", () => {
         const mockServer = {
           config: config.servers[0],
           client: {} as any,
-          transport: {} as any,
+          transport: { close: async () => {} } as any,
           tools: [{ name: "tool1", description: "Test", inputSchema: {} }],
         };
         (wrapper as any).connectedServers.set("good-server", mockServer);

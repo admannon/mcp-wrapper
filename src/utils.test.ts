@@ -1,9 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   prefixToolName,
   parseToolName,
   isValidServerName,
   isValidToolName,
+  getSupplementalEnv,
 } from "./utils.js";
 
 describe("utils", () => {
@@ -125,6 +126,56 @@ describe("utils", () => {
 
     it("should return false for tool name containing custom separator", () => {
       expect(isValidToolName("my-tool", "-")).toBe(false);
+    });
+  });
+
+  describe("getSupplementalEnv", () => {
+    it("should return ProgramData and ALLUSERSPROFILE on Windows when set", () => {
+      const originalPlatform = process.platform;
+      const originalEnv = { ...process.env };
+      try {
+        Object.defineProperty(process, "platform", { value: "win32" });
+        process.env.ProgramData = "C:\\ProgramData";
+        process.env.ALLUSERSPROFILE = "C:\\ProgramData";
+
+        const env = getSupplementalEnv();
+        expect(env.ProgramData).toBe("C:\\ProgramData");
+        expect(env.ALLUSERSPROFILE).toBe("C:\\ProgramData");
+      } finally {
+        Object.defineProperty(process, "platform", { value: originalPlatform });
+        process.env.ProgramData = originalEnv.ProgramData;
+        process.env.ALLUSERSPROFILE = originalEnv.ALLUSERSPROFILE;
+      }
+    });
+
+    it("should return empty object on non-Windows platforms", () => {
+      const originalPlatform = process.platform;
+      try {
+        Object.defineProperty(process, "platform", { value: "linux" });
+        const env = getSupplementalEnv();
+        expect(env).toEqual({});
+      } finally {
+        Object.defineProperty(process, "platform", { value: originalPlatform });
+      }
+    });
+
+    it("should skip env vars that are not set", () => {
+      const originalPlatform = process.platform;
+      const originalProgramData = process.env.ProgramData;
+      const originalAllUsers = process.env.ALLUSERSPROFILE;
+      try {
+        Object.defineProperty(process, "platform", { value: "win32" });
+        delete process.env.ProgramData;
+        delete process.env.ALLUSERSPROFILE;
+
+        const env = getSupplementalEnv();
+        expect(env.ProgramData).toBeUndefined();
+        expect(env.ALLUSERSPROFILE).toBeUndefined();
+      } finally {
+        Object.defineProperty(process, "platform", { value: originalPlatform });
+        if (originalProgramData !== undefined) process.env.ProgramData = originalProgramData;
+        if (originalAllUsers !== undefined) process.env.ALLUSERSPROFILE = originalAllUsers;
+      }
     });
   });
 });

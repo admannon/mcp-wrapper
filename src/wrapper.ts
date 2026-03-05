@@ -10,7 +10,7 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { WrapperConfig, WrappedServerConfig } from "./types.js";
-import { prefixToolName as utilPrefixToolName, isValidServerName } from "./utils.js";
+import { prefixToolName as utilPrefixToolName, isValidServerName, getSupplementalEnv } from "./utils.js";
 
 const DEFAULT_SEPARATOR = "__";
 const DEFAULT_VERSION = "1.0.0";
@@ -159,7 +159,7 @@ export class McpWrapper {
       transport = new StdioClientTransport({
         command: serverConfig.command as string,
         args: serverConfig.args,
-        env: serverConfig.env,
+        env: { ...getSupplementalEnv(), ...serverConfig.env },
         cwd: serverConfig.cwd,
       });
     }
